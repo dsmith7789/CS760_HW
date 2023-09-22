@@ -1,9 +1,23 @@
 import pandas as pd
 
 def gain_ratio():
+    # y_entropy
+    # y_conditional_entropy
+    # split_entropy 
     pass
 
-def entropy():
+def entropy(feature: str) -> float:
+    ''' Use standard formula to calculate entropy of dataset w.r.t some attribute.
+
+    Entropy(feature) = -{sum[P(feature=val) * lg(P(feature=val))]} for all values of feature
+
+    Args:
+        feature:
+            The column name (ex. "x1", "x2", "y")
+    
+    Returns:
+        The entropy of the dataset with respect to that column
+    '''
     pass
 
 def conditional_entropy():
