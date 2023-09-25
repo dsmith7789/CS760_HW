@@ -6,18 +6,33 @@ def gain_ratio():
     # split_entropy 
     pass
 
-def entropy(feature: str) -> float:
+def entropy(df:pd.DataFrame, feature: str, split: float) -> float:
     ''' Use standard formula to calculate entropy of dataset w.r.t some attribute.
 
     Entropy(feature) = -{sum[P(feature=val) * lg(P(feature=val))]} for all values of feature
 
     Args:
+        df:
+            The dataset we are calculating the column's entropy for.
         feature:
-            The column name (ex. "x1", "x2", "y")
-    
+            The column name (ex. "x1", "x2", "y") within the dataset.
+        split:
+            If a value is greater than or equal to the split, it goes in one branch; otherwise it goes in the other branch.    
     Returns:
         The entropy of the dataset with respect to that column
     '''
+    entropy = 0
+    class_0_count = 0
+    class_1_count = 0
+    total = df.shape[0]
+    for i in df.index:
+        if df[feature][i] < split:
+            class_0_count += 1
+        else:
+            class_1_count += 1
+    # we can get away with this because we're using binary splits
+    for i in range(2):
+
     pass
 
 def conditional_entropy():
