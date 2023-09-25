@@ -1,10 +1,28 @@
 import pandas as pd
+import math
 
-def gain_ratio():
-    # y_entropy
-    # y_conditional_entropy
-    # split_entropy 
-    pass
+def gain_ratio(df: pd.DataFrame, split_feature: str, split: float) -> float:
+    ''' Normalize information gain of a split by the entropy of that split.
+
+    Calculates using standard formula of gain_ratio(d, s) = [H(Y) - H(Y|S)] / H(S)
+    
+    Args:
+        df:
+            The dataset we are calculating the entropy over.
+        split_feature:
+            The candidate split's feature (ex. split_feature = "x1" if considering a split of x1 >= 0.5)
+        split:
+            The value which if the feature is >= to, instances would go to one branch, but go to the other branch if < that split value.
+            For example, split = 0.5 if considering a split of x1 >= 0.5.
+    
+    Returns:
+        The result of the standard gain ratio formula shown above.
+    '''
+    y_entropy = entropy(df, feature="y", split=1)
+    y_conditional_entropy = conditional_entropy(df, split_feature=split_feature, split=split)
+    split_entropy = entropy(df, feature=split_feature, split=split)
+    gain_ratio = (y_entropy - conditional_entropy) / split_entropy
+    return gain_ratio
 
 def entropy(df:pd.DataFrame, feature: str, split: float) -> float:
     ''' Use standard formula to calculate entropy of dataset w.r.t some attribute.
@@ -31,12 +49,32 @@ def entropy(df:pd.DataFrame, feature: str, split: float) -> float:
         else:
             class_1_count += 1
     # we can get away with this because we're using binary splits
-    for i in range(2):
+    for count in [class_0_count, class_1_count]:
+        entropy += (count / total) * math.log((count / total), 2)
+    return -1 * entropy
 
-    pass
+def conditional_entropy(df: pd.DataFrame, split_feature: str, split: float):
+    ''' Calculates the conditional entropy of the output with respect to a feature and a condition.
 
-def conditional_entropy():
-    pass
+    For example, if trying to calculate H(Y|X2 >= 0.5), you would put in:
+    conditional_entropy(df, condition_var="x2", condition=0.5)
+
+    Args:
+        df:
+            The dataset we are calculating entropy over.
+        condition_var:
+            The feature we have a condition on (ex. what is the conditional entropy of Y if we know feature >= 0.5?)
+        condition:
+            The value we are splitting the feature values on. Since this is a binary split, we can consider the branches
+            where feature < condition and where feature >= condition.
+    '''
+    upper_split_df = df.loc[df[split_feature] >= split]
+    lower_split_df = df.loc[df[split_feature] < split]
+    conditional_entropy = 0
+    upper_split_entropy = entropy(upper_split_df, feature="y", split=1)
+    lower_split_entropy = entropy(lower_split_df, feature="y", split=1)
+    conditional_entropy += (upper_split_entropy + lower_split_entropy)
+    return -1 * conditional_entropy
 
 def find_best_split(dataset: pd.DataFrame, candidate_splits: list[tuple[str, float]]) -> tuple[str, float]:
     '''Finds the split among the candidates that has the best gain ratio.
@@ -50,8 +88,8 @@ def find_best_split(dataset: pd.DataFrame, candidate_splits: list[tuple[str, flo
     '''
     best_gain_ratio = float("-inf")
     best_candidate = None
-    for split in candidate_splits:
-        gain_ratio = gain_ratio(dataset, split)
+    for split_feature, split in candidate_splits:
+        gain_ratio = gain_ratio(dataset, split_feature, split)
         
     pass
 
