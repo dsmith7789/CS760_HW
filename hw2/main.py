@@ -1,5 +1,6 @@
 import pandas as pd
 import math
+from TreeNode import TreeNode
 
 def gain_ratio(df: pd.DataFrame, split_feature: str, split: float) -> float:
     ''' Normalize information gain of a split by the entropy of that split.
@@ -21,7 +22,7 @@ def gain_ratio(df: pd.DataFrame, split_feature: str, split: float) -> float:
     y_entropy = entropy(df, feature="y", split=1)
     y_conditional_entropy = conditional_entropy(df, split_feature=split_feature, split=split)
     split_entropy = entropy(df, feature=split_feature, split=split)
-    gain_ratio = (y_entropy - conditional_entropy) / split_entropy
+    gain_ratio = (y_entropy - conditional_entropy) / split_entropy # TODO if split entropy is 0, then we have a stop condition
     return gain_ratio
 
 def entropy(df:pd.DataFrame, feature: str, split: float) -> float:
@@ -90,10 +91,15 @@ def find_best_split(dataset: pd.DataFrame, candidate_splits: list[tuple[str, flo
     best_candidate = None
     for split_feature, split in candidate_splits:
         gain_ratio = gain_ratio(dataset, split_feature, split)
-        
-    pass
+        if gain_ratio >= best_gain_ratio:
+            best_gain_ratio = gain_ratio
+            best_candidate = (split_feature, split)
+    return best_candidate
 
 def stop_criteria_met():
+    # node is empty
+    # all splits have 0 gain ratio
+    # the entropy of any candidate's split is 0
     pass
 
 def determine_split_candidates(instance_df: pd.DataFrame) -> list[tuple[str, float]]:
@@ -110,9 +116,19 @@ def determine_split_candidates(instance_df: pd.DataFrame) -> list[tuple[str, flo
                 print(feature, instance_df.at[i, feature], instance_df.at[i, "y"])
                 split_candidates.append((feature, instance_df.at[i, feature]))  # (feature, value) is a candidate split
     return split_candidates
-    pass
 
-def make_subtree(instance_df: pd.DataFrame):
+def make_subtree(df: pd.DataFrame) -> TreeNode:
+    split_candidates = determine_split_candidates(df)
+    if stop_criteria_met:
+        # make leaf node N
+        # determine class label for N
+    else:
+        # make internal node N
+        (best_split_feature, best_split_value) = find_best_split(df, split_candidates)
+        left_df = df.loc[df[best_split_feature] < best_split_value]
+        left_subtree = make_subtree(left_df)
+        right_df = df.loc[df[best_split_feature] >= best_split_value]
+        right_subtree = make_subtree(right_df)
     pass
 
 
