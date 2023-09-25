@@ -2,7 +2,10 @@ import pandas as pd
 import math
 from TreeNode import TreeNode
 
-def gain_ratio(df: pd.DataFrame, split_feature: str, split: float) -> float:
+# global to catch when stop criteria is met at any given point
+stop_criteria_met = False
+
+def calculate_gain_ratio(df: pd.DataFrame, split_feature: str, split: float) -> float:
     ''' Normalize information gain of a split by the entropy of that split.
 
     Calculates using standard formula of gain_ratio(d, s) = [H(Y) - H(Y|S)] / H(S)
@@ -22,7 +25,9 @@ def gain_ratio(df: pd.DataFrame, split_feature: str, split: float) -> float:
     y_entropy = entropy(df, feature="y", split=1)
     y_conditional_entropy = conditional_entropy(df, split_feature=split_feature, split=split)
     split_entropy = entropy(df, feature=split_feature, split=split)
-    gain_ratio = (y_entropy - conditional_entropy) / split_entropy # TODO if split entropy is 0, then we have a stop condition
+    if split_entropy == 0:
+        return 0
+    gain_ratio = (y_entropy - y_conditional_entropy) / split_entropy
     return gain_ratio
 
 def entropy(df:pd.DataFrame, feature: str, split: float) -> float:
@@ -49,8 +54,13 @@ def entropy(df:pd.DataFrame, feature: str, split: float) -> float:
             class_0_count += 1
         else:
             class_1_count += 1
+
+    if class_0_count == 0 or class_1_count == 0:
+        return 0
+    
     # we can get away with this because we're using binary splits
     for count in [class_0_count, class_1_count]:
+        print(f"count = {count}")
         entropy += (count / total) * math.log((count / total), 2)
     return -1 * entropy
 
@@ -87,59 +97,95 @@ def find_best_split(dataset: pd.DataFrame, candidate_splits: list[tuple[str, flo
     Returns:
         The candidate tuple that has the maximum gain ratio.
     '''
-    best_gain_ratio = float("-inf")
+    best_gain_ratio = 0
     best_candidate = None
+    global stop_criteria_met
     for split_feature, split in candidate_splits:
-        gain_ratio = gain_ratio(dataset, split_feature, split)
+        gain_ratio = calculate_gain_ratio(dataset, split_feature, split)
         if gain_ratio >= best_gain_ratio:
             best_gain_ratio = gain_ratio
             best_candidate = (split_feature, split)
+    if best_gain_ratio == 0:
+        stop_criteria_met = True
     return best_candidate
 
-def stop_criteria_met():
-    # node is empty
-    # all splits have 0 gain ratio
-    # the entropy of any candidate's split is 0
-    pass
+def majority_class(df: pd.DataFrame) -> int:
+    ''' Finds the majority output class among instances in a dataset.
 
-def determine_split_candidates(instance_df: pd.DataFrame) -> list[tuple[str, float]]:
+    Used to determine what the class label is when making a leaf node in the tree.
+
+    Args:
+        df:
+            The dataset we are considering for this leaf node.
+    
+    Returns:
+        0 or 1, depending on which output class is the majority (returns 1 in the case of a tie).
+    '''
+    class_0_count = 0
+    class_1_count = 1
+    for i in df.index:
+        if df["y"][i] == 0:
+            class_0_count += 1
+        else:
+            class_1_count += 1
+    
+    return 0 if class_0_count > class_1_count else 1
+
+def determine_split_candidates(df: pd.DataFrame) -> list[tuple[str, float]]:
     '''Given a set of training instances, determine the feature/value pairs we can split on.
 
+    Args:
+        df:
+            The dataset we are trying to split.
+    Returns:
+        A list of (feature, value) tuples that we can split on (ex. [("x1", 0.5), ("x2", 0.6)])
     '''
     split_candidates = []
     for feature in ["x1", "x2"]:
-        print(f"this should be sorted ascending by {feature}:")
-        instance_df.sort_values(by=feature, ignore_index=True, inplace=True)
-        print(instance_df)
-        for i in range(instance_df.shape[0] - 1):
-            if instance_df.at[i, "y"] != instance_df.at[i + 1, "y"]:
-                print(feature, instance_df.at[i, feature], instance_df.at[i, "y"])
-                split_candidates.append((feature, instance_df.at[i, feature]))  # (feature, value) is a candidate split
+        df.sort_values(by=feature, ignore_index=True, inplace=True)
+        for i in range(df.shape[0] - 1):
+            if df.at[i, "y"] != df.at[i + 1, "y"]:
+                split_candidates.append((feature, df.at[i, feature]))  # (feature, value) is a candidate split
     return split_candidates
 
 def make_subtree(df: pd.DataFrame) -> TreeNode:
-    split_candidates = determine_split_candidates(df)
-    if stop_criteria_met:
-        # make leaf node N
-        # determine class label for N
-    else:
-        # make internal node N
+    global stop_criteria_met
+    node = TreeNode()
+    best_split_feature, best_split_value = None, None # set later
+
+    if not df.empty:
+        split_candidates = determine_split_candidates(df)
         (best_split_feature, best_split_value) = find_best_split(df, split_candidates)
+    else:
+        stop_criteria_met = True
+
+    if stop_criteria_met:
+        # make leaf node
+        node.leaf = True
+        node.class_label = majority_class(df)
+        stop_criteria_met = False
+    else:
+        # make internal node
+        node.feature = best_split_feature
+        node.split_value = best_split_value
+
         left_df = df.loc[df[best_split_feature] < best_split_value]
         left_subtree = make_subtree(left_df)
         right_df = df.loc[df[best_split_feature] >= best_split_value]
         right_subtree = make_subtree(right_df)
-    pass
+
+        node.left = left_subtree
+        node.right = right_subtree
+    
+    return node
 
 
 def main():
     #s = determine_split_candidates(None)
 
-    train_df = pd.read_csv("Homework_2_data/D1.txt", sep=" ", header=None, names=["x1", "x2", "y"])
-    print(train_df.shape)
-    split_candidates = determine_split_candidates(train_df)
-    print(split_candidates)
-    pass
+    df = pd.read_csv("Homework_2_data/D1.txt", sep=" ", header=None, names=["x1", "x2", "y"])
+    root = make_subtree(df)
+    print(root)
 
 if __name__ == "__main__":
     main()

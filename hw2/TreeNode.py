@@ -1,17 +1,10 @@
 class TreeNode:
-    def __init__(self, feature_index: int, split: float, class_label: int) -> None:
-        self.feature_index = feature_index
-        self.split = split
+    def __init__(self) -> None:
+        ''' Representation of a node in the decision tree.
+        '''
+        self.feature = None  # The feature we would be splitting on (ex. "x1", "x2")
+        self.split_value = None  # The value of the feature that we are splitting on (ex. x1 >= 0.5, then split = 0.5)
+        self.leaf = False   # only need to set if we're at a leaf node
         self.class_label = None # leave blank until we know it's a leaf node
         self.left = None
         self.right = None
-
-    def set_class_label(self, class_label: int) -> None:
-        ''' Marks node as a leaf, sets the class label associated with leaf node.
-
-        Args:
-            class_label:
-                Either 0 or 1, since those are the only 2 labels available for this dataset.
-        '''
-        self.class_label = class_label
-        pass
