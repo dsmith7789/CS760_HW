@@ -60,7 +60,7 @@ def entropy(df:pd.DataFrame, feature: str, split: float) -> float:
     
     # we can get away with this because we're using binary splits
     for count in [class_0_count, class_1_count]:
-        print(f"count = {count}")
+        # print(f"count = {count}")
         entropy += (count / total) * math.log((count / total), 2)
     return -1 * entropy
 
@@ -79,13 +79,13 @@ def conditional_entropy(df: pd.DataFrame, split_feature: str, split: float):
             The value we are splitting the feature values on. Since this is a binary split, we can consider the branches
             where feature < condition and where feature >= condition.
     '''
-    upper_split_df = df.loc[df[split_feature] >= split]
-    lower_split_df = df.loc[df[split_feature] < split]
+    upper_split_df = df[df[split_feature] >= split]
+    lower_split_df = df[df[split_feature] < split]
     conditional_entropy = 0
     upper_split_entropy = entropy(upper_split_df, feature="y", split=1)
     lower_split_entropy = entropy(lower_split_df, feature="y", split=1)
     conditional_entropy += (upper_split_entropy + lower_split_entropy)
-    return -1 * conditional_entropy
+    return conditional_entropy
 
 def find_best_split(dataset: pd.DataFrame, candidate_splits: list[tuple[str, float]]) -> tuple[str, float]:
     '''Finds the split among the candidates that has the best gain ratio.
@@ -98,7 +98,7 @@ def find_best_split(dataset: pd.DataFrame, candidate_splits: list[tuple[str, flo
         The candidate tuple that has the maximum gain ratio.
     '''
     best_gain_ratio = 0
-    best_candidate = None
+    best_candidate = (None, None)
     global stop_criteria_met
     for split_feature, split in candidate_splits:
         gain_ratio = calculate_gain_ratio(dataset, split_feature, split)
@@ -145,10 +145,11 @@ def determine_split_candidates(df: pd.DataFrame) -> list[tuple[str, float]]:
         df.sort_values(by=feature, ignore_index=True, inplace=True)
         for i in range(df.shape[0] - 1):
             if df.at[i, "y"] != df.at[i + 1, "y"]:
-                split_candidates.append((feature, df.at[i, feature]))  # (feature, value) is a candidate split
+                split_candidates.append((feature, df.at[i + 1, feature]))  # (feature, value) is a candidate split
     return split_candidates
 
 def make_subtree(df: pd.DataFrame) -> TreeNode:
+    print(f"dataset size = {df.shape}")
     global stop_criteria_met
     node = TreeNode()
     best_split_feature, best_split_value = None, None # set later
@@ -169,9 +170,11 @@ def make_subtree(df: pd.DataFrame) -> TreeNode:
         node.feature = best_split_feature
         node.split_value = best_split_value
 
-        left_df = df.loc[df[best_split_feature] < best_split_value]
+        left_df = df[df[best_split_feature] < best_split_value]
+        print("calculating left subtree")
         left_subtree = make_subtree(left_df)
-        right_df = df.loc[df[best_split_feature] >= best_split_value]
+        right_df = df[df[best_split_feature] >= best_split_value]
+        print("calculating right subtree")
         right_subtree = make_subtree(right_df)
 
         node.left = left_subtree
